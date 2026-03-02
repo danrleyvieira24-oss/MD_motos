@@ -6,69 +6,91 @@
 <title>Roleta MD 2 Rodas</title>
 
 <style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    text-align: center;
-    color: white;
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0f172a;
+    text-align:center;
+    color:white;
 }
 
-h1 { margin-top: 20px; }
+h1{margin-top:20px;}
 
-#container {
-    position: relative;
-    display: inline-block;
+#container{
+    position:relative;
+    display:inline-block;
 }
 
-/* Ponteiro agora apontando PARA BAIXO */
-#ponteiro {
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%) rotate(180deg);
-    width: 0;
-    height: 0;
-    border-left: 18px solid transparent;
-    border-right: 18px solid transparent;
-    border-bottom: 30px solid #dc2626;
-    z-index: 10;
+/* LUZES CASSINO */
+canvas{
+    margin-top:20px;
+    border-radius:50%;
+    box-shadow:0 0 20px #facc15,
+               0 0 40px #facc15,
+               0 0 60px #facc15;
 }
 
-canvas {
-    margin-top: 20px;
+/* PONTEIRO EMBAIXO */
+#ponteiro{
+    position:absolute;
+    bottom:-8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0;
+    height:0;
+    border-left:20px solid transparent;
+    border-right:20px solid transparent;
+    border-top:35px solid #dc2626;
+    z-index:10;
 }
 
-#logoCentro {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: white;
-    padding: 10px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+#logoCentro{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:white;
+    padding:10px;
+    box-shadow:0 0 15px rgba(0,0,0,0.6);
 }
 
-button {
-    margin-top: 20px;
-    padding: 15px 30px;
-    font-size: 18px;
-    background: #b91c1c;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
+button{
+    margin-top:20px;
+    padding:15px 30px;
+    font-size:18px;
+    background:#b91c1c;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
 }
 
-button:disabled { background: gray; }
+button:disabled{background:gray;}
 
-#resultado {
-    margin-top: 25px;
-    font-size: 20px;
-    font-weight: bold;
+#resultado{
+    margin-top:25px;
+    font-size:22px;
+    font-weight:bold;
+}
+
+/* CONFETE */
+.confete{
+    position:fixed;
+    width:8px;
+    height:8px;
+    background:red;
+    top:-10px;
+    animation:cair 3s linear forwards;
+}
+
+@keyframes cair{
+    to{
+        transform:translateY(100vh) rotate(720deg);
+        opacity:0;
+    }
 }
 </style>
 </head>
@@ -88,131 +110,139 @@ button:disabled { background: gray; }
 <div id="resultado"></div>
 
 <script>
-const premios = [
-    {nome: "Revisão Básica Grátis", peso: 30},
-    {nome: "Documentação Grátis", peso: 20},
-    {nome: "Tanque Cheio", peso: 20},
-    {nome: "Parcelamento Facilitado", peso: 20},
-    {nome: "Capacete + Óleo", peso: 8},
-    {nome: "R$ 300 Desconto", peso: 2}
+const premios=[
+{nome:"Revisão Básica Grátis",peso:30},
+{nome:"Documentação Grátis",peso:20},
+{nome:"Tanque Cheio",peso:20},
+{nome:"Parcelamento Facilitado",peso:20},
+{nome:"Capacete + Óleo",peso:8},
+{nome:"R$ 300 Desconto",peso:2}
 ];
 
-const premioMaiorIndex = 5; // índice do prêmio maior
+const premioMaiorIndex=5;
+const cores=["#16a34a","#2563eb","#f59e0b","#9333ea","#dc2626","#0ea5e9"];
 
-const cores = ["#16a34a","#2563eb","#f59e0b","#9333ea","#dc2626","#0ea5e9"];
+const canvas=document.getElementById("roleta");
+const ctx=canvas.getContext("2d");
+const total=premios.length;
+const angulo=2*Math.PI/total;
 
-const canvas = document.getElementById("roleta");
-const ctx = canvas.getContext("2d");
-const total = premios.length;
-const angulo = 2 * Math.PI / total;
+let girando=false;
+let rotacaoAtual=0;
 
-let girando = false;
-let rotacaoAtual = 0;
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
 
-/* ÁUDIO */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function tocarTic() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+function tocarTic(){
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.frequency.value = 900;
-    gain.gain.value = 0.15;
+    osc.frequency.value=900;
+    gain.gain.value=0.15;
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.03);
+    osc.stop(audioCtx.currentTime+0.03);
 }
 
-function tocarVitoria() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+function tocarVitoria(){
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-
-    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.4);
-    gain.gain.value = 0.3;
-
+    osc.frequency.setValueAtTime(600,audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(1400,audioCtx.currentTime+0.5);
+    gain.gain.value=0.4;
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.5);
+    osc.stop(audioCtx.currentTime+0.6);
 }
 
-function desenhar() {
-    for (let i = 0; i < total; i++) {
+function confete(){
+    for(let i=0;i<120;i++){
+        const c=document.createElement("div");
+        c.classList.add("confete");
+        c.style.left=Math.random()*100+"vw";
+        c.style.backgroundColor=cores[Math.floor(Math.random()*cores.length)];
+        c.style.animationDuration=(Math.random()*2+2)+"s";
+        document.body.appendChild(c);
+        setTimeout(()=>c.remove(),3000);
+    }
+}
+
+function desenhar(){
+    for(let i=0;i<total;i++){
         ctx.beginPath();
         ctx.moveTo(160,160);
         ctx.arc(160,160,150,i*angulo,(i+1)*angulo);
-        ctx.fillStyle = cores[i];
+        ctx.fillStyle=cores[i];
         ctx.fill();
         ctx.stroke();
 
         ctx.save();
         ctx.translate(160,160);
-        ctx.rotate(i*angulo + angulo/2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#fff";
-        ctx.font = "12px Arial";
-        ctx.fillText(premios[i].nome, 140, 5);
+        ctx.rotate(i*angulo+angulo/2);
+        ctx.textAlign="right";
+        ctx.fillStyle="#fff";
+        ctx.font="12px Arial";
+        ctx.fillText(premios[i].nome,140,5);
         ctx.restore();
     }
 }
 
-function sorteioPonderado() {
-    let totalPeso = premios.reduce((s,p)=>s+p.peso,0);
-    let r = Math.random() * totalPeso;
-    for (let i = 0; i < premios.length; i++) {
-        if (r < premios[i].peso) return i;
-        r -= premios[i].peso;
+function sorteioPonderado(){
+    let totalPeso=premios.reduce((s,p)=>s+p.peso,0);
+    let r=Math.random()*totalPeso;
+    for(let i=0;i<premios.length;i++){
+        if(r<premios[i].peso) return i;
+        r-=premios[i].peso;
     }
 }
 
-function girar() {
-    if (girando) return;
-    girando = true;
-    document.getElementById("btnGirar").disabled = true;
-
+function girar(){
+    if(girando)return;
+    girando=true;
+    document.getElementById("btnGirar").disabled=true;
     audioCtx.resume();
 
-    let indice = sorteioPonderado();
+    let indice=sorteioPonderado();
+    let grausPorFatia=360/total;
 
-    let grausPorFatia = 360 / total;
+    let centroFatia=(indice*grausPorFatia)+(grausPorFatia/2);
 
-    /* CORREÇÃO MATEMÁTICA:
-       Ajusta para o centro exato da fatia */
-    let destino = (indice * grausPorFatia) + (grausPorFatia / 2);
+    /* Ponteiro embaixo = 180° */
+    let destino=360-centroFatia+180;
 
-    let girosExtras = 360 * 6;
+    let girosExtras=360*6;
+    let destinoFinal=rotacaoAtual+girosExtras+destino;
 
-    let destinoFinal = rotacaoAtual + girosExtras + (360 - destino);
+    let inicio=null;
+    let duracao=4500;
+    let ultimoTick=-1;
 
-    let inicio = null;
-    let duracao = 4500;
-    let ultimoTick = -1;
+    function animar(timestamp){
+        if(!inicio)inicio=timestamp;
+        let progresso=timestamp-inicio;
+        let porcentagem=Math.min(progresso/duracao,1);
+        let ease=1-Math.pow(1-porcentagem,3);
 
-    function animar(timestamp) {
-        if (!inicio) inicio = timestamp;
-        let progresso = timestamp - inicio;
-        let porcentagem = Math.min(progresso / duracao, 1);
-        let ease = 1 - Math.pow(1 - porcentagem, 3);
+        let rotacao=rotacaoAtual+(destinoFinal-rotacaoAtual)*ease;
+        canvas.style.transform=`rotate(${rotacao}deg)`;
 
-        let rotacao = rotacaoAtual + (destinoFinal - rotacaoAtual) * ease;
-        canvas.style.transform = `rotate(${rotacao}deg)`;
-
-        let divisaoAtual = Math.floor((rotacao % 360) / grausPorFatia);
-        if (divisaoAtual !== ultimoTick) {
+        let divisaoAtual=Math.floor((rotacao%360)/grausPorFatia);
+        if(divisaoAtual!==ultimoTick){
             tocarTic();
-            ultimoTick = divisaoAtual;
+            ultimoTick=divisaoAtual;
         }
 
-        if (progresso < duracao) {
+        if(progresso<duracao){
             requestAnimationFrame(animar);
-        } else {
-            rotacaoAtual = destinoFinal % 360;
-            document.getElementById("resultado").innerHTML =
-                "🏆 Você ganhou:<br>" + premios[indice].nome;
+        }else{
+            rotacaoAtual=destinoFinal%360;
 
-            if (indice === premioMaiorIndex) {
+            document.getElementById("resultado").innerHTML=
+            "🏆 Você ganhou:<br>"+premios[indice].nome;
+
+            if(indice===premioMaiorIndex){
                 tocarVitoria();
+                confete();
             }
         }
     }
@@ -222,7 +252,7 @@ function girar() {
 
 desenhar();
 </script>
-
 </body>
 </html>
+
 
