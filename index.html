@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roleta MD 2 Rodas</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    text-align: center;
+    color: white;
+}
+
+h1 { margin-top: 20px; }
+
+#container {
+    position: relative;
+    display: inline-block;
+}
+
+canvas {
+    margin-top: 20px;
+    transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* PONTEIRO FIXO */
+#ponteiro {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 30px solid #dc2626;
+    z-index: 10;
+}
+
+/* LOGO CENTRAL */
+#logoCentro {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: white;
+    padding: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+}
+
+button {
+    margin-top: 20px;
+    padding: 15px 30px;
+    font-size: 18px;
+    background: #b91c1c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+button:disabled { background: gray; }
+
+#resultado {
+    margin-top: 25px;
+    font-size: 20px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>🎉 MÊS DO CONSUMIDOR</h1>
+<h2>MD 2 Rodas</h2>
+
+<div id="container">
+    <div id="ponteiro"></div>
+    <canvas id="roleta" width="320" height="320"></canvas>
+    <img src="logo.png" id="logoCentro">
+</div>
+
+<br>
+<button onclick="girar()" id="btnGirar">GIRAR ROLETA</button>
+
+<div id="resultado"></div>
+
+<script>
+const premios = [
+    {nome: "Revisão Básica Grátis", peso: 30},
+    {nome: "Documentação Grátis", peso: 20},
+    {nome: "Tanque Cheio", peso: 20},
+    {nome: "Parcelamento Facilitado", peso: 20},
+    {nome: "Capacete + Óleo", peso: 8},
+    {nome: "R$ 300 Desconto", peso: 2}
+];
+
+const cores = ["#16a34a","#2563eb","#f59e0b","#9333ea","#dc2626","#0ea5e9"];
+
+const canvas = document.getElementById("roleta");
+const ctx = canvas.getContext("2d");
+const total = premios.length;
+const angulo = 2 * Math.PI / total;
+let girando = false;
+let rotacaoAtual = 0;
+
+function desenhar() {
+    for (let i = 0; i < total; i++) {
+        ctx.beginPath();
+        ctx.moveTo(160,160);
+        ctx.arc(160,160,150,i*angulo,(i+1)*angulo);
+        ctx.fillStyle = cores[i];
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(160,160);
+        ctx.rotate(i*angulo + angulo/2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px Arial";
+        ctx.fillText(premios[i].nome, 140, 5);
+        ctx.restore();
+    }
+}
+
+function sorteioPonderado() {
+    let totalPeso = premios.reduce((s,p)=>s+p.peso,0);
+    let r = Math.random() * totalPeso;
+    for (let i = 0; i < premios.length; i++) {
+        if (r < premios[i].peso) return i;
+        r -= premios[i].peso;
+    }
+}
+
+function girar() {
+    if (girando) return;
+    girando = true;
+
+    document.getElementById("btnGirar").disabled = true;
+
+    let indice = sorteioPonderado();
+
+    let grausPorFatia = 360 / total;
+    let destino = (360 - (indice * grausPorFatia) - grausPorFatia/2);
+    let girosExtras = 360 * 5;
+
+    rotacaoAtual += girosExtras + destino;
+
+    canvas.style.transform = `rotate(${rotacaoAtual}deg)`;
+
+    setTimeout(() => {
+        document.getElementById("resultado").innerHTML =
+            "🏆 Você ganhou:<br>" + premios[indice].nome;
+    }, 4000);
+}
+
+desenhar();
+</script>
+
+</body>
+</html>
