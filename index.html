@@ -23,10 +23,9 @@ h1 { margin-top: 20px; }
 
 canvas {
     margin-top: 20px;
-    transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* PONTEIRO FIXO */
+/* Ponteiro */
 #ponteiro {
     position: absolute;
     top: 5px;
@@ -40,7 +39,6 @@ canvas {
     z-index: 10;
 }
 
-/* LOGO CENTRAL */
 #logoCentro {
     position: absolute;
     top: 50%;
@@ -106,8 +104,26 @@ const canvas = document.getElementById("roleta");
 const ctx = canvas.getContext("2d");
 const total = premios.length;
 const angulo = 2 * Math.PI / total;
+
 let girando = false;
-let rotacaoAtual = 0;
+let rotacao = 0;
+let ultimoTick = 0;
+
+/* SOM TIC */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function tocarTic() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.frequency.value = 1000;
+    gain.gain.value = 0.2;
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.03);
+}
 
 function desenhar() {
     for (let i = 0; i < total; i++) {
@@ -141,23 +157,44 @@ function sorteioPonderado() {
 function girar() {
     if (girando) return;
     girando = true;
-
     document.getElementById("btnGirar").disabled = true;
 
-    let indice = sorteioPonderado();
+    audioCtx.resume();
 
+    let indice = sorteioPonderado();
     let grausPorFatia = 360 / total;
     let destino = (360 - (indice * grausPorFatia) - grausPorFatia/2);
     let girosExtras = 360 * 5;
+    let destinoFinal = rotacao + girosExtras + destino;
 
-    rotacaoAtual += girosExtras + destino;
+    let inicio = null;
+    let duracao = 4000;
 
-    canvas.style.transform = `rotate(${rotacaoAtual}deg)`;
+    function animar(timestamp) {
+        if (!inicio) inicio = timestamp;
+        let progresso = timestamp - inicio;
+        let porcentagem = Math.min(progresso / duracao, 1);
+        let ease = 1 - Math.pow(1 - porcentagem, 3);
 
-    setTimeout(() => {
-        document.getElementById("resultado").innerHTML =
-            "🏆 Você ganhou:<br>" + premios[indice].nome;
-    }, 4000);
+        rotacao = destinoFinal * ease;
+        canvas.style.transform = `rotate(${rotacao}deg)`;
+
+        let divisaoAtual = Math.floor((rotacao % 360) / grausPorFatia);
+
+        if (divisaoAtual !== ultimoTick) {
+            tocarTic();
+            ultimoTick = divisaoAtual;
+        }
+
+        if (progresso < duracao) {
+            requestAnimationFrame(animar);
+        } else {
+            document.getElementById("resultado").innerHTML =
+                "🏆 Você ganhou:<br>" + premios[indice].nome;
+        }
+    }
+
+    requestAnimationFrame(animar);
 }
 
 desenhar();
